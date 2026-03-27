@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance Marketing Dashboard — Country Deep Dive</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --green: #16a34a;
+  --amber: #d97706;
+  --red: #dc2626;
+  --bg: #ffffff;
+  --card-bg: #f8fafc;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-light: #64748b;
+  --text-lighter: #94a3b8;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+.header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 24px 32px; }
+.header h1 { font-size: 22px; font-weight: 700; }
+.header p { color: #94a3b8; font-size: 13px; margin-top: 4px; }
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); background: #f8fafc; padding: 0 24px; position: sticky; top: 0; z-index: 100; }
+.tab { padding: 12px 20px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-light); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; white-space: nowrap; }
+.tab:hover { color: var(--text); }
+.tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+.content { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* KPI Cards */
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.kpi-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); font-weight: 600; }
+.kpi-card .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+.kpi-card .sub { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+.kpi-card.green .value { color: var(--green); }
+.kpi-card.amber .value { color: var(--amber); }
+.kpi-card.red .value { color: var(--red); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; margin-bottom: 24px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #f1f5f9; padding: 10px 12px; text-align: right; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-light); border-bottom: 2px solid var(--border); white-space: nowrap; }
+th:first-child { text-align: left; }
+td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td:first-child { text-align: left; font-weight: 600; }
+tr:nth-child(even) { background: #f8fafc; }
+tr:hover { background: #eff6ff; }
+tr.total-row { font-weight: 700; background: #f1f5f9 !important; border-top: 2px solid var(--border); }
+.change-pos { color: var(--green); font-size: 11px; }
+.change-neg { color: var(--red); font-size: 11px; }
+.change-flat { color: var(--text-lighter); font-size: 11px; }
+
+/* Section headers */
+.section-title { font-size: 16px; font-weight: 700; margin: 28px 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.section-title:first-child { margin-top: 0; }
+.chart-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+.chart-container canvas { max-height: 320px; }
+.chart-insight { font-size: 12px; color: var(--text-light); margin-top: 8px; font-style: italic; padding-top: 8px; border-top: 1px solid var(--border); }
+
+/* Insights */
+.insights-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
+.insights-box h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #92400e; }
+.insight-item { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.insight-tag { font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; height: fit-content; }
+.insight-tag.working { background: #dcfce7; color: var(--green); }
+.insight-tag.broken { background: #fef2f2; color: var(--red); }
+.insight-tag.fix { background: #fff7ed; color: var(--amber); }
+.insight-tag.rec { background: #eff6ff; color: #2563eb; }
+
+/* Alert banner */
+.alert-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; color: var(--red); font-weight: 600; font-size: 13px; }
+
+/* Charts grid */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+@media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+/* Channel comparison */
+.channel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.channel-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.channel-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.channel-card .badge-meta { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.channel-card .badge-google { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.channel-metric { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.channel-metric:last-child { border-bottom: none; }
+.channel-metric .cm-label { color: var(--text-light); }
+.channel-metric .cm-value { font-weight: 600; }
+
+/* Funnel bar */
+.funnel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.funnel-bar-wrap { flex: 1; }
+.funnel-bar { height: 32px; border-radius: 6px; display: flex; align-items: center; padding: 0 12px; font-weight: 600; font-size: 12px; color: white; min-width: 40px; }
+.funnel-label { width: 100px; font-size: 13px; font-weight: 600; text-align: right; flex-shrink: 0; }
+.funnel-value { width: 80px; font-size: 13px; text-align: right; flex-shrink: 0; }
+.funnel-conv { width: 60px; font-size: 12px; color: var(--text-light); flex-shrink: 0; }
+
+/* Print */
+@media print {
+  .tabs { display: none; }
+  .tab-panel { display: block !important; page-break-before: always; }
+  .tab-panel:first-child { page-break-before: avoid; }
+  .header { padding: 16px 24px; }
+  .content { padding: 16px 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Performance Marketing Dashboard — Country Deep Dive</h1>
+  <p>Nov 2025 — Mar 2026 (MTD) | Data: Perf Tracker International | Currency: INR (85 = $1 USD) | Generated 27 Mar 2026</p>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" onclick="switchTab('executive')">Executive</div>
+  <div class="tab" onclick="switchTab('us')">US</div>
+  <div class="tab" onclick="switchTab('apac')">APAC</div>
+  <div class="tab" onclick="switchTab('me')">ME</div>
+  <div class="tab" onclick="switchTab('uk')">UK</div>
+  <div class="tab" onclick="switchTab('india')">India</div>
+</div>
+
+<div class="content">
+
+<!-- ==================== EXECUTIVE TAB ==================== -->
+<div class="tab-panel active" id="panel-executive">
+
+<div class="section-title" style="margin-top:0">Portfolio KPIs (Nov 2025 — Mar 2026 MTD)</div>
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Total Spend</div>
+    <div class="value">₹12.0 Cr</div>
+    <div class="sub">$1.41M</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Qualified Leads</div>
+    <div class="value">12,420</div>
+    <div class="sub">Across 7 markets</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Trials Done</div>
+    <div class="value">3,373</div>
+    <div class="sub">27.2% of QLs</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Paid</div>
+    <div class="value">1,122</div>
+    <div class="sub">33.3% of Trials</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="label">Blended CPQL</div>
+    <div class="value">₹9,671</div>
+    <div class="sub">$114</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">Blended CAC</div>
+    <div class="value">₹1.07L</div>
+    <div class="sub">$1,259</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="label">Avg Booking</div>
+    <div class="value">₹78,245</div>
+    <div class="sub">$921</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">Blended ROAS</div>
+    <div class="value">0.73x</div>
+    <div class="sub">₹8.8Cr booking vs ₹12.0Cr spend</div>
+  </div>
+</div>
+
+<div class="section-title">Country Comparison</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Country</th><th>Spend (₹L)</th><th>QLs</th><th>CPQL (₹)</th><th>TD</th><th>TD%</th><th>CPTD (₹)</th><th>Paid</th><th>Paid%</th><th>CAC (₹)</th><th>Booking (₹L)</th><th>Avg Book (₹K)</th><th>ROAS</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>US</td><td>718.7</td><td>6,985</td><td style="color:var(--amber)">10,289</td><td>1,764</td><td>25.3%</td><td>40,743</td><td>639</td><td>36.2%</td><td style="color:var(--red)">1,12,474</td><td>590.0</td><td>92.3</td><td style="color:var(--amber)">0.82x</td>
+</tr>
+<tr>
+  <td>APAC</td><td>225.0</td><td>2,513</td><td style="color:var(--green)">8,954</td><td>720</td><td>28.7%</td><td>31,253</td><td>259</td><td>36.0%</td><td style="color:var(--amber)">86,881</td><td>153.8</td><td>59.4</td><td style="color:var(--amber)">0.68x</td>
+</tr>
+<tr>
+  <td>ME</td><td>121.2</td><td>1,908</td><td style="color:var(--green)">6,355</td><td>608</td><td>31.9%</td><td>19,942</td><td>170</td><td>28.0%</td><td style="color:var(--green)">71,320</td><td>89.5</td><td>52.7</td><td style="color:var(--amber)">0.74x</td>
+</tr>
+<tr>
+  <td>UK</td><td>22.5</td><td>319</td><td style="color:var(--green)">7,043</td><td>78</td><td>24.5%</td><td>28,805</td><td>19</td><td>24.4%</td><td style="color:var(--red)">1,18,253</td><td>17.6</td><td>92.9</td><td style="color:var(--amber)">0.79x</td>
+</tr>
+<tr>
+  <td>India</td><td>113.7</td><td>276</td><td style="color:var(--red)">41,208</td><td>58</td><td>21.0%</td><td>1,96,096</td><td>6</td><td>10.3%</td><td style="color:var(--red)">18,95,590</td><td>5.1</td><td>85.0</td><td style="color:var(--red)">0.04x</td>
+</tr>
+<tr>
+  <td>Canada*</td><td>—</td><td>407</td><td>—</td><td>142</td><td>34.9%</td><td>—</td><td>27</td><td>19.0%</td><td>—</td><td>19.1</td><td>70.9</td><td>—</td>
+</tr>
+<tr class="total-row">
+  <td>TOTAL</td><td>1,201.2</td><td>12,420</td><td>9,671</td><td>3,373</td><td>27.2%</td><td>35,618</td><td>1,122</td><td>33.3%</td><td>1,07,057</td><td>877.9</td><td>78.2</td><td>0.73x</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p style="font-size:11px;color:var(--text-lighter);margin-top:-16px;margin-bottom:16px">* Canada has no separate cost data in the tracker. Leads attributed but spend likely bundled with US.</p>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Monthly CPQL Trend by Country</h4>
+    <canvas id="exec-cpql-chart"></canvas>
+    <div class="chart-insight">US CPQL shot up 60% from Dec (₹6,847) to Mar (₹14,223). ME remains the most efficient market with CPQL under ₹8K throughout.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Monthly CAC Trend by Country</h4>
+    <canvas id="exec-cac-chart"></canvas>
+    <div class="chart-insight">March CAC exploded across all markets — US hit ₹2.97L ($3,491), APAC ₹2.50L ($2,941). Only 89 total paid in March vs 284 in Feb.</div>
+  </div>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Spend Share by Country</h4>
+    <canvas id="exec-pie-chart"></canvas>
+    <div class="chart-insight">US commands 60% of total spend (₹7.2 Cr) but only delivers 57% of paid customers. ME gets 10% of spend but delivers 15% of paid — most capital-efficient market.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Monthly Spend Trajectory</h4>
+    <canvas id="exec-spend-chart"></canvas>
+    <div class="chart-insight">Total monthly spend nearly doubled from Nov (₹2.15 Cr) to Feb (₹3.67 Cr) but paid only grew 26%. Spend scaling faster than outcomes.</div>
+  </div>
+</div>
+
+<div class="section-title">Top 5 Recommendations</div>
+<div class="insights-box">
+  <div class="insight-item"><span class="insight-tag rec">1</span>Redirect 20-30% of US Meta spend to Google — Google delivers 2x better trial rates (35% vs 19%) and 42% lower CAC ($766 vs $2,343).</div>
+  <div class="insight-item"><span class="insight-tag rec">2</span>Shut down India performance marketing (ROAS 0.04x). ₹1.14 Cr spent for 6 paid customers. Reallocate to ME which needs just ₹71K CAC.</div>
+  <div class="insight-item"><span class="insight-tag rec">3</span>Investigate March conversion collapse: Paid rate dropped from 33% (Jan) to 21% (Mar). This isn't a marketing problem — it's a sales/product problem hitting all markets simultaneously.</div>
+  <div class="insight-item"><span class="insight-tag rec">4</span>APAC Feb-Mar spend spike (₹78L → ₹67L) without proportional paid growth needs immediate audit. Scale back until unit economics recover.</div>
+  <div class="insight-item"><span class="insight-tag rec">5</span>UK just started scaling (Feb spend jumped 20x) — too early to judge but trial-to-paid (24%) is weakest among intl markets. Watch closely before increasing budget.</div>
+</div>
+
+</div>
+
+<!-- ==================== US TAB ==================== -->
+<div class="tab-panel" id="panel-us">
+
+<div class="section-title" style="margin-top:0">US Performance Summary (Nov 2025 — Mar 2026 MTD)</div>
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Total Spend</div>
+    <div class="value">₹7.19 Cr</div>
+    <div class="sub">$845K | 60% of portfolio</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Qualified Leads</div>
+    <div class="value">6,985</div>
+    <div class="sub">56% of all QLs</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Trials Done</div>
+    <div class="value">1,764</div>
+    <div class="sub">25.3% TD rate</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Paid</div>
+    <div class="value">639</div>
+    <div class="sub">36.2% conversion</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="label">CPQL</div>
+    <div class="value">₹10,289</div>
+    <div class="sub">$121</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">CAC</div>
+    <div class="value">₹1.12L</div>
+    <div class="sub">$1,323</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="label">Avg Booking</div>
+    <div class="value">₹92,321</div>
+    <div class="sub">$1,086</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="label">ROAS</div>
+    <div class="value">0.82x</div>
+    <div class="sub">₹5.9Cr booking / ₹7.2Cr spend</div>
+  </div>
+</div>
+
+<div class="section-title">Monthly Performance</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Month</th><th>Spend (₹L)</th><th>MoM</th><th>QLs</th><th>CPQL (₹)</th><th>MoM</th><th>TD</th><th>CPTD (₹)</th><th>Paid</th><th>CAC (₹)</th><th>MoM</th><th>Booking (₹L)</th><th>Avg Book (₹K)</th></tr>
+</thead>
+<tbody>
+<tr><td>Nov 25</td><td>130.2</td><td>—</td><td>1,468</td><td>8,869</td><td>—</td><td>306</td><td>42,549</td><td>135</td><td>96,444</td><td>—</td><td>100.9</td><td>74.7</td></tr>
+<tr><td>Dec 25</td><td>59.8</td><td class="change-pos">-54%</td><td>873</td><td>6,847</td><td class="change-pos">-23%</td><td>242</td><td>24,700</td><td>114</td><td>52,433</td><td class="change-pos">-46%</td><td>104.0</td><td>91.2</td></tr>
+<tr><td>Jan 26</td><td>174.2</td><td class="change-neg">+191%</td><td>1,893</td><td>9,200</td><td class="change-neg">+34%</td><td>545</td><td>31,956</td><td>197</td><td>88,406</td><td class="change-neg">+69%</td><td>186.5</td><td>94.6</td></tr>
+<tr><td>Feb 26</td><td>227.0</td><td class="change-neg">+30%</td><td>1,854</td><td>12,243</td><td class="change-neg">+33%</td><td>472</td><td>48,091</td><td>150</td><td>1,51,326</td><td class="change-neg">+71%</td><td>158.4</td><td>105.6</td></tr>
+<tr><td>Mar 26</td><td>127.6</td><td class="change-pos">-44%</td><td>897</td><td>14,223</td><td class="change-neg">+16%</td><td>199</td><td>64,112</td><td>43</td><td>2,96,706</td><td class="change-neg">+96%</td><td>40.2</td><td>93.6</td></tr>
+<tr class="total-row"><td>Total</td><td>718.7</td><td></td><td>6,985</td><td>10,289</td><td></td><td>1,764</td><td>40,743</td><td>639</td><td>1,12,474</td><td></td><td>590.0</td><td>92.3</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Funnel: QL → Trial Done → Paid</h4>
+    <canvas id="us-funnel-chart"></canvas>
+    <div class="chart-insight">25% QL→TD rate means 3 out of 4 qualified leads never take a trial. The bigger leak is at the top of funnel, not conversion.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">CPQL + Spend (Dual Axis)</h4>
+    <canvas id="us-cpql-spend-chart"></canvas>
+    <div class="chart-insight">CPQL rose steadily from ₹6,847 to ₹14,223 while spend scaled. Classic diminishing returns — each incremental dollar buys worse leads.</div>
+  </div>
+</div>
+
+<div class="section-title">Channel Split: Meta vs Google</div>
+<div class="channel-grid">
+  <div class="channel-card">
+    <h4><span class="badge-meta">META</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹4.98 Cr ($586K)</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">4,146</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value" style="color:var(--red)">₹12,006 ($141)</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value" style="color:var(--red)">19.0%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">250</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--red)">₹1,99,113 ($2,343)</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid Rate</span><span class="cm-value">31.7%</span></div>
+  </div>
+  <div class="channel-card">
+    <h4><span class="badge-google">GOOGLE</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹2.21 Cr ($260K)</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">2,476</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value" style="color:var(--green)">₹8,923 ($105)</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value" style="color:var(--green)">35.4%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">339</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--green)">₹65,169 ($766)</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid Rate</span><span class="cm-value">38.7%</span></div>
+  </div>
+</div>
+
+<div class="section-title">Top Campaign Categories</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Campaign Category</th><th>QLs</th><th>TD</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Booking (₹L)</th><th>Avg Book (₹K)</th></tr>
+</thead>
+<tbody>
+<tr><td>Brand</td><td>1,234</td><td>581</td><td style="color:var(--green)">47.1%</td><td>227</td><td style="color:var(--green)">39.1%</td><td>290.8</td><td>128.1</td></tr>
+<tr><td>LAL_Enrolled_Jan'26</td><td>423</td><td>52</td><td style="color:var(--red)">12.3%</td><td>19</td><td>36.5%</td><td>18.0</td><td>94.8</td></tr>
+<tr><td>Others</td><td>332</td><td>101</td><td>30.4%</td><td>48</td><td style="color:var(--green)">47.5%</td><td>37.3</td><td>77.7</td></tr>
+<tr><td>Advantage+Telugu_forms</td><td>318</td><td>46</td><td style="color:var(--red)">14.5%</td><td>12</td><td>26.1%</td><td>9.3</td><td>77.6</td></tr>
+<tr><td>Generic_tuition</td><td>280</td><td>94</td><td style="color:var(--green)">33.6%</td><td>44</td><td style="color:var(--green)">46.8%</td><td>30.1</td><td>68.5</td></tr>
+<tr><td>Pmax_Inmarket</td><td>258</td><td>14</td><td style="color:var(--red)">5.4%</td><td>6</td><td>42.9%</td><td>6.7</td><td>112.2</td></tr>
+<tr><td>Telugu+Expats</td><td>227</td><td>55</td><td>24.2%</td><td>20</td><td>36.4%</td><td>10.9</td><td>54.6</td></tr>
+<tr><td>PayU-Math-Kangaroo</td><td>226</td><td>52</td><td>23.0%</td><td>17</td><td>32.7%</td><td>12.9</td><td>76.1</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="section-title">US Ethnicity Breakdown</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Segment</th><th>QLs</th><th>% of Total</th><th>TD</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Booking (₹L)</th><th>Avg Book (₹K)</th></tr>
+</thead>
+<tbody>
+<tr><td>NRI</td><td>4,232</td><td>60.6%</td><td>1,646</td><td style="color:var(--green)">38.9%</td><td>596</td><td style="color:var(--green)">36.2%</td><td>551.9</td><td>92.6</td></tr>
+<tr><td>Non-NRI</td><td>1,541</td><td>22.1%</td><td>39</td><td style="color:var(--red)">2.5%</td><td>12</td><td>30.8%</td><td>10.4</td><td>86.5</td></tr>
+<tr><td>Asian Others</td><td>1,048</td><td>15.0%</td><td>77</td><td style="color:var(--red)">7.3%</td><td>30</td><td style="color:var(--green)">39.0%</td><td>27.5</td><td>91.5</td></tr>
+<tr><td>Other</td><td>164</td><td>2.3%</td><td>2</td><td style="color:var(--red)">1.2%</td><td>1</td><td>50.0%</td><td>0.2</td><td>18.5</td></tr>
+<tr class="total-row"><td>Total</td><td>6,985</td><td>100%</td><td>1,764</td><td>25.3%</td><td>639</td><td>36.2%</td><td>590.0</td><td>92.3</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Ethnicity: QL to Trial Done Conversion</h4>
+    <canvas id="us-eth-chart"></canvas>
+    <div class="chart-insight">NRI converts at 39% TD rate vs Non-NRI at 2.5% — a 15x gap. Non-NRI generates 22% of QLs but only 2% of trials. These leads are essentially wasted spend.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Ethnicity: Share of Funnel</h4>
+    <canvas id="us-eth-funnel-chart"></canvas>
+    <div class="chart-insight">NRI is 61% of QLs but 93% of Paid. The funnel is almost entirely dependent on NRI conversion. Non-NRI + Asian Others is a ₹2-3 Cr spend question.</div>
+  </div>
+</div>
+
+<div class="section-title">US Insights</div>
+<div class="insights-box">
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>Google Brand + Generic_tuition — best TD rates (47%, 34%) and paid rates (39%, 47%). Workhorse campaigns with high booking values.</div>
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>NRI segment — 39% TD rate, 36% paid rate, ₹92.6K avg booking. This is the profitable core.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Non-NRI QL→TD at 2.5% is catastrophically low. 1,541 leads generated, 39 trials done, 12 paid. This is effectively burning money.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Meta CAC (₹1.99L / $2,343) is 3x Google (₹65K / $766). Meta produces higher volume but far worse quality.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>March collapse: CAC jumped to ₹2.97L from ₹1.51L in Feb. Only 43 paid in March vs 150 in Feb despite continued spending.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Shift 30% of Meta budget to Google. Google's 35% TD rate vs Meta's 19% means every ₹ works 85% harder.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Audit LAL_Enrolled and Pmax_Inmarket — both have 5-12% TD rate. Either fix targeting or reallocate spend to Brand/Generic.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Non-NRI needs a fundamentally different trial experience. Current 2.5% TD rate means the product/trial doesn't resonate with non-Indian families.</div>
+</div>
+
+</div>
+
+<!-- ==================== APAC TAB ==================== -->
+<div class="tab-panel" id="panel-apac">
+
+<div class="section-title" style="margin-top:0">APAC Performance Summary (Nov 2025 — Mar 2026 MTD)</div>
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Total Spend</div>
+    <div class="value">₹2.25 Cr</div>
+    <div class="sub">$265K | 19% of portfolio</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Qualified Leads</div>
+    <div class="value">2,513</div>
+    <div class="sub">20% of all QLs</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Trials Done</div>
+    <div class="value">720</div>
+    <div class="sub">28.7% TD rate</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Paid</div>
+    <div class="value">259</div>
+    <div class="sub">36.0% conversion</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="label">CPQL</div>
+    <div class="value">₹8,954</div>
+    <div class="sub">$105</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="label">CAC</div>
+    <div class="value">₹86,881</div>
+    <div class="sub">$1,022</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Avg Booking</div>
+    <div class="value">₹59,401</div>
+    <div class="sub">$699</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="label">ROAS</div>
+    <div class="value">0.68x</div>
+    <div class="sub">₹1.54Cr booking / ₹2.25Cr spend</div>
+  </div>
+</div>
+
+<div class="section-title">Monthly Performance</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Month</th><th>Spend (₹L)</th><th>MoM</th><th>QLs</th><th>CPQL (₹)</th><th>MoM</th><th>TD</th><th>Paid</th><th>CAC (₹)</th><th>MoM</th><th>Booking (₹L)</th><th>Avg Book (₹K)</th></tr>
+</thead>
+<tbody>
+<tr><td>Nov 25</td><td>27.2</td><td>—</td><td>300</td><td>9,051</td><td>—</td><td>95</td><td>44</td><td>61,712</td><td>—</td><td>29.4</td><td>66.8</td></tr>
+<tr><td>Dec 25</td><td>14.0</td><td class="change-pos">-49%</td><td>225</td><td>6,216</td><td class="change-pos">-31%</td><td>92</td><td>42</td><td>33,298</td><td class="change-pos">-46%</td><td>24.9</td><td>59.3</td></tr>
+<tr><td>Jan 26</td><td>38.2</td><td class="change-neg">+174%</td><td>439</td><td>8,713</td><td class="change-neg">+40%</td><td>150</td><td>62</td><td>61,692</td><td class="change-neg">+85%</td><td>36.7</td><td>59.2</td></tr>
+<tr><td>Feb 26</td><td>78.1</td><td class="change-neg">+104%</td><td>919</td><td>8,501</td><td class="change-pos">-2%</td><td>262</td><td>84</td><td>93,009</td><td class="change-neg">+51%</td><td>45.4</td><td>54.0</td></tr>
+<tr><td>Mar 26</td><td>67.5</td><td class="change-pos">-14%</td><td>630</td><td>10,715</td><td class="change-neg">+26%</td><td>121</td><td>27</td><td>2,50,025</td><td class="change-neg">+169%</td><td>17.5</td><td>64.7</td></tr>
+<tr class="total-row"><td>Total</td><td>225.0</td><td></td><td>2,513</td><td>8,954</td><td></td><td>720</td><td>259</td><td>86,881</td><td></td><td>153.8</td><td>59.4</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Funnel: QL → Trial Done → Paid</h4>
+    <canvas id="apac-funnel-chart"></canvas>
+    <div class="chart-insight">APAC has the best trial-to-paid rate (36%) among all markets, but TD rate (28.7%) is still mediocre. Better lead qualification could significantly improve efficiency.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">CPQL + Spend (Dual Axis)</h4>
+    <canvas id="apac-cpql-spend-chart"></canvas>
+    <div class="chart-insight">Spend tripled from Nov to Feb while CPQL held steady (~₹8.5-9K). But March broke the pattern — CPQL spiked to ₹10.7K as the market saturated.</div>
+  </div>
+</div>
+
+<div class="section-title">Channel Split: Meta vs Google</div>
+<div class="channel-grid">
+  <div class="channel-card">
+    <h4><span class="badge-meta">META</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹2.03 Cr ($238K)</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">2,149</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value">₹9,434 ($111)</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value" style="color:var(--red)">25.2%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">189</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--red)">₹1,07,273 ($1,262)</span></div>
+  </div>
+  <div class="channel-card">
+    <h4><span class="badge-google">GOOGLE</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹22.3L ($26K)</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">310</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value" style="color:var(--green)">₹7,186 ($85)</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value" style="color:var(--green)">50.3%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">60</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--green)">₹37,126 ($437)</span></div>
+  </div>
+</div>
+
+<div class="section-title">Top Campaign Categories</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Campaign Category</th><th>QLs</th><th>TD</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Booking (₹L)</th></tr>
+</thead>
+<tbody>
+<tr><td>Brand</td><td>233</td><td>137</td><td style="color:var(--green)">58.8%</td><td>49</td><td>35.8%</td><td>43.0</td></tr>
+<tr><td>PayU</td><td>142</td><td>62</td><td style="color:var(--green)">43.7%</td><td>21</td><td>33.9%</td><td>14.0</td></tr>
+<tr><td>Int-All-Expats2</td><td>136</td><td>39</td><td>28.7%</td><td>21</td><td style="color:var(--green)">53.8%</td><td>10.0</td></tr>
+<tr><td>LAL-AllQLs-0-2%</td><td>109</td><td>39</td><td>35.8%</td><td>21</td><td style="color:var(--green)">53.8%</td><td>9.4</td></tr>
+<tr><td>Indian-Expats-NAPLAN</td><td>106</td><td>9</td><td style="color:var(--red)">8.5%</td><td>4</td><td>44.4%</td><td>1.6</td></tr>
+<tr><td>LAL-QL-0to2%-NAPLAN</td><td>89</td><td>17</td><td>19.1%</td><td>2</td><td style="color:var(--red)">11.8%</td><td>0.6</td></tr>
+<tr><td>ANZ-Int-Parents</td><td>73</td><td>21</td><td>28.8%</td><td>7</td><td>33.3%</td><td>3.2</td></tr>
+<tr><td>NZ-PayU-Testimonials</td><td>67</td><td>24</td><td>35.8%</td><td>7</td><td>29.2%</td><td>3.6</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="section-title">APAC Insights</div>
+<div class="insights-box">
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>Google delivers 50% TD rate and ₹37K CAC — 3x more efficient than Meta. But it's only 10% of APAC spend.</div>
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>Brand (59% TD) and PayU (44% TD) campaigns are the strongest performers. High-intent captures work well in APAC.</div>
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>Int-All-Expats2 and LAL-AllQLs — both 54% paid rate, best conversion in the market.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>March CAC exploded to ₹2.5L — only 27 paid on ₹67.5L spend. February's aggressive scaling didn't translate.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Indian-Expats-NAPLAN: 106 QLs but only 9 trials (8.5% TD). NAPLAN-focused targeting attracts browsers, not buyers.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Scale Google from 10% to 25-30% of APAC spend. The 50% TD rate justifies aggressive expansion.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Pull back February-level spend until March conversion data stabilizes. Current trajectory is unsustainable.</div>
+</div>
+
+</div>
+
+<!-- ==================== ME TAB ==================== -->
+<div class="tab-panel" id="panel-me">
+
+<div class="section-title" style="margin-top:0">Middle East Performance Summary (Nov 2025 — Mar 2026 MTD)</div>
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Total Spend</div>
+    <div class="value">₹1.21 Cr</div>
+    <div class="sub">$143K | 10% of portfolio</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Qualified Leads</div>
+    <div class="value">1,908</div>
+    <div class="sub">15% of all QLs</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Trials Done</div>
+    <div class="value">608</div>
+    <div class="sub green">31.9% TD rate (best)</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Paid</div>
+    <div class="value">170</div>
+    <div class="sub">28.0% conversion</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="label">CPQL</div>
+    <div class="value">₹6,355</div>
+    <div class="sub">$75 — lowest</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="label">CAC</div>
+    <div class="value">₹71,320</div>
+    <div class="sub">$839 — lowest</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Avg Booking</div>
+    <div class="value">₹52,655</div>
+    <div class="sub">$620</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="label">ROAS</div>
+    <div class="value">0.74x</div>
+    <div class="sub">₹89.5L booking / ₹121.2L spend</div>
+  </div>
+</div>
+
+<div class="section-title">Monthly Performance</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Month</th><th>Spend (₹L)</th><th>MoM</th><th>QLs</th><th>CPQL (₹)</th><th>MoM</th><th>TD</th><th>Paid</th><th>CAC (₹)</th><th>MoM</th><th>Booking (₹L)</th><th>Avg Book (₹K)</th></tr>
+</thead>
+<tbody>
+<tr><td>Nov 25</td><td>25.3</td><td>—</td><td>451</td><td>5,621</td><td>—</td><td>130</td><td>40</td><td>63,375</td><td>—</td><td>18.3</td><td>45.7</td></tr>
+<tr><td>Dec 25</td><td>11.3</td><td class="change-pos">-56%</td><td>219</td><td>5,144</td><td class="change-pos">-8%</td><td>84</td><td>29</td><td>38,845</td><td class="change-pos">-39%</td><td>13.8</td><td>47.6</td></tr>
+<tr><td>Jan 26</td><td>33.0</td><td class="change-neg">+193%</td><td>516</td><td>6,405</td><td class="change-neg">+25%</td><td>196</td><td>57</td><td>57,980</td><td class="change-neg">+49%</td><td>31.9</td><td>56.0</td></tr>
+<tr><td>Feb 26</td><td>32.6</td><td class="change-flat">-1%</td><td>428</td><td>7,606</td><td class="change-neg">+19%</td><td>119</td><td>28</td><td>1,16,263</td><td class="change-neg">+100%</td><td>16.5</td><td>59.0</td></tr>
+<tr><td>Mar 26</td><td>19.0</td><td class="change-pos">-42%</td><td>294</td><td>6,472</td><td class="change-pos">-15%</td><td>79</td><td>16</td><td>1,18,920</td><td class="change-neg">+2%</td><td>9.0</td><td>56.0</td></tr>
+<tr class="total-row"><td>Total</td><td>121.2</td><td></td><td>1,908</td><td>6,355</td><td></td><td>608</td><td>170</td><td>71,320</td><td></td><td>89.5</td><td>52.7</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Funnel: QL → Trial Done → Paid</h4>
+    <canvas id="me-funnel-chart"></canvas>
+    <div class="chart-insight">ME has the best QL→TD rate at 32%, but paid rate (28%) trails US (36%) and APAC (36%). The gap is in post-trial conversion.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">CPQL + Spend (Dual Axis)</h4>
+    <canvas id="me-cpql-spend-chart"></canvas>
+    <div class="chart-insight">CPQL stayed in a tight ₹5-7.6K range — ME is the most predictable market. The cost structure holds even as spend fluctuates.</div>
+  </div>
+</div>
+
+<div class="section-title">Channel Split: Meta vs Google</div>
+<div class="channel-grid">
+  <div class="channel-card">
+    <h4><span class="badge-meta">META</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹1.02 Cr ($120K)</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">1,473</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value">₹6,944 ($82)</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value">30.3%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">113</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value">₹90,512 ($1,065)</span></div>
+  </div>
+  <div class="channel-card">
+    <h4><span class="badge-google">GOOGLE</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹19.0L ($22K)</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">353</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value" style="color:var(--green)">₹5,373 ($63)</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value" style="color:var(--green)">37.7%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">49</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--green)">₹38,706 ($455)</span></div>
+  </div>
+</div>
+
+<div class="section-title">Top Campaign Categories</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Campaign Category</th><th>QLs</th><th>TD</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Booking (₹L)</th></tr>
+</thead>
+<tbody>
+<tr><td>High_ROAS_Creative_Scaling</td><td>239</td><td>95</td><td style="color:var(--green)">39.7%</td><td>21</td><td>22.1%</td><td>10.2</td></tr>
+<tr><td>Interest_Maths_Engaged</td><td>200</td><td>67</td><td style="color:var(--green)">33.5%</td><td>19</td><td>28.4%</td><td>10.9</td></tr>
+<tr><td>Dubai Location 2</td><td>163</td><td>47</td><td>28.8%</td><td>14</td><td>29.8%</td><td>5.4</td></tr>
+<tr><td>Google_Generic_KWs</td><td>163</td><td>31</td><td>19.0%</td><td>12</td><td style="color:var(--green)">38.7%</td><td>5.4</td></tr>
+<tr><td>MEA_Int-Female</td><td>126</td><td>39</td><td>31.0%</td><td>11</td><td>28.2%</td><td>4.8</td></tr>
+<tr><td>Google_Brand_KWs</td><td>115</td><td>62</td><td style="color:var(--green)">53.9%</td><td>20</td><td>32.3%</td><td>10.1</td></tr>
+<tr><td>Advantage+Non-OTP</td><td>95</td><td>36</td><td style="color:var(--green)">37.9%</td><td>8</td><td>22.2%</td><td>4.8</td></tr>
+<tr><td>Others</td><td>85</td><td>30</td><td>35.3%</td><td>8</td><td>26.7%</td><td>5.3</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="section-title">ME Insights</div>
+<div class="insights-box">
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>ME is the most capital-efficient market — lowest CPQL (₹6,355), lowest CAC (₹71,320). Should receive MORE budget.</div>
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>Google Brand KWs: 54% TD rate, ₹39K CAC — the gold standard campaign in ME.</div>
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>High_ROAS_Creative_Scaling lives up to its name — 40% TD rate on 239 QLs.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Post-trial conversion dropped from 31% (Nov) to 20% (Mar). Same systemic issue hitting all markets.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Avg booking (₹52.7K) is the lowest of all intl markets — 43% less than US. Revenue per customer is thin.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>ME should be the scale-up priority. Even at 0.74x ROAS, its cost efficiency and lead quality make it the best incremental ₹ opportunity.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Work on upselling/longer subscriptions to lift avg booking from ₹52.7K toward ₹70K+. The CAC supports it.</div>
+</div>
+
+</div>
+
+<!-- ==================== UK TAB ==================== -->
+<div class="tab-panel" id="panel-uk">
+
+<div class="section-title" style="margin-top:0">UK Performance Summary (Nov 2025 — Mar 2026 MTD)</div>
+<div class="alert-banner">Early-stage market: UK spend scaled 15x in Feb 2026. All metrics are volatile and based on small samples. Read with caution.</div>
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Total Spend</div>
+    <div class="value">₹22.5L</div>
+    <div class="sub">$26K | 2% of portfolio</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Qualified Leads</div>
+    <div class="value">319</div>
+    <div class="sub">3% of all QLs</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Trials Done</div>
+    <div class="value">78</div>
+    <div class="sub">24.5% TD rate</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Paid</div>
+    <div class="value">19</div>
+    <div class="sub">24.4% conversion</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="label">CPQL</div>
+    <div class="value">₹7,043</div>
+    <div class="sub">$83</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">CAC</div>
+    <div class="value">₹1.18L</div>
+    <div class="sub">$1,391</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="label">Avg Booking</div>
+    <div class="value">₹92,861</div>
+    <div class="sub">$1,093 — highest</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="label">ROAS</div>
+    <div class="value">0.79x</div>
+    <div class="sub">₹17.6L booking / ₹22.5L spend</div>
+  </div>
+</div>
+
+<div class="section-title">Monthly Performance</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Month</th><th>Spend (₹L)</th><th>MoM</th><th>QLs</th><th>CPQL (₹)</th><th>TD</th><th>Paid</th><th>CAC (₹)</th><th>Booking (₹L)</th><th>Avg Book (₹K)</th></tr>
+</thead>
+<tbody>
+<tr><td>Nov 25</td><td>0.7</td><td>—</td><td>33</td><td>2,217</td><td>12</td><td>4</td><td>18,294</td><td>3.6</td><td>89.5</td></tr>
+<tr><td>Dec 25</td><td>0.7</td><td class="change-flat">-4%</td><td>15</td><td>4,663</td><td>7</td><td>5</td><td>13,989</td><td>3.9</td><td>78.4</td></tr>
+<tr><td>Jan 26</td><td>0.6</td><td class="change-pos">-21%</td><td>15</td><td>3,674</td><td>7</td><td>4</td><td>13,778</td><td>3.6</td><td>90.3</td></tr>
+<tr><td>Feb 26</td><td>11.4</td><td class="change-neg">+1,969%</td><td>148</td><td>7,705</td><td>40</td><td>5</td><td>2,28,063</td><td>4.7</td><td>93.5</td></tr>
+<tr><td>Mar 26</td><td>9.1</td><td class="change-pos">-20%</td><td>108</td><td>8,410</td><td>12</td><td>1</td><td>9,08,253</td><td>1.9</td><td>185.8</td></tr>
+<tr class="total-row"><td>Total</td><td>22.5</td><td></td><td>319</td><td>7,043</td><td>78</td><td>19</td><td>1,18,253</td><td>17.6</td><td>92.9</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Funnel: QL → Trial Done → Paid</h4>
+    <canvas id="uk-funnel-chart"></canvas>
+    <div class="chart-insight">UK's 24% paid rate is the weakest internationally. Small sample, but 78 trials → 19 paid suggests the post-trial experience needs work for UK parents.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">CPQL + Spend (Dual Axis)</h4>
+    <canvas id="uk-cpql-spend-chart"></canvas>
+    <div class="chart-insight">CPQL doubled when spend scaled (₹2.2K at ₹0.7L → ₹8.4K at ₹9.1L). Expected for a new market, but watch if it stabilizes.</div>
+  </div>
+</div>
+
+<div class="section-title">Channel Split: Meta vs Google</div>
+<div class="channel-grid">
+  <div class="channel-card">
+    <h4><span class="badge-meta">META</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹19.1L ($22K)</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">241</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value">₹7,911 ($93)</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value" style="color:var(--red)">18.3%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">6</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--red)">₹3,17,743 ($3,738)</span></div>
+  </div>
+  <div class="channel-card">
+    <h4><span class="badge-google">GOOGLE</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹3.4L ($4K)</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">59</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value" style="color:var(--green)">₹5,769 ($68)</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value" style="color:var(--green)">50.8%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">11</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--green)">₹30,941 ($364)</span></div>
+  </div>
+</div>
+
+<div class="section-title">UK Insights</div>
+<div class="insights-box">
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>Highest avg booking in the portfolio (₹92.9K / $1,093). UK parents pay premium prices — worth acquiring if CAC is controlled.</div>
+  <div class="insight-item"><span class="insight-tag working">WORKING</span>Google in UK: 51% TD rate, ₹31K CAC — exceptional. But only ₹3.4L spend, tiny sample.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Meta in UK is a disaster — 18% TD, ₹3.18L CAC. 85% of UK spend goes to Meta but only 35% of paid come from it.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Feb/Mar scaling too fast: 148 QLs in Feb but only 5 paid. Market isn't ready for aggressive spend.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Flip the channel mix — 70% Google, 30% Meta. Google's ₹31K CAC is profitable on ₹93K avg booking.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Pull back to ₹3-5L/month total and focus on Google Brand + PayU-Testimonial campaigns until unit economics prove out.</div>
+</div>
+
+</div>
+
+<!-- ==================== INDIA TAB ==================== -->
+<div class="tab-panel" id="panel-india">
+
+<div class="section-title" style="margin-top:0">India Performance Summary (Nov 2025 — Mar 2026 MTD)</div>
+<div class="alert-banner">CRITICAL: India has only 6 paid customers on ₹1.14 Cr spend. CAC is ₹18.96 Lakh per customer. This market's performance marketing is not working.</div>
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Total Spend</div>
+    <div class="value">₹1.14 Cr</div>
+    <div class="sub">9% of portfolio spend</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Qualified Leads</div>
+    <div class="value">276</div>
+    <div class="sub">Tiny volume</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Trials Done</div>
+    <div class="value">58</div>
+    <div class="sub">21.0% TD rate</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">Paid</div>
+    <div class="value">6</div>
+    <div class="sub">10.3% conversion — worst</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">CPQL</div>
+    <div class="value">₹41,208</div>
+    <div class="sub">4x portfolio average</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">CAC</div>
+    <div class="value">₹18.96L</div>
+    <div class="sub">27x ME's CAC</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Avg Booking</div>
+    <div class="value">₹85,012</div>
+    <div class="sub">Decent but irrelevant at 6 customers</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">ROAS</div>
+    <div class="value">0.04x</div>
+    <div class="sub">₹5.1L booking on ₹1.14 Cr spend</div>
+  </div>
+</div>
+
+<div class="section-title">Monthly Performance</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Month</th><th>Spend (₹L)</th><th>MoM</th><th>QLs</th><th>CPQL (₹)</th><th>TD</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Booking (₹L)</th></tr>
+</thead>
+<tbody>
+<tr><td>Nov 25</td><td>31.7</td><td>—</td><td>105</td><td>30,188</td><td>16</td><td>15.2%</td><td>1</td><td>6.3%</td><td>1.6</td></tr>
+<tr><td>Dec 25</td><td>23.9</td><td class="change-pos">-25%</td><td>65</td><td>36,740</td><td>14</td><td>21.5%</td><td>1</td><td>7.1%</td><td>1.5</td></tr>
+<tr><td>Jan 26</td><td>22.9</td><td class="change-pos">-4%</td><td>58</td><td>39,471</td><td>16</td><td>27.6%</td><td>3</td><td>18.8%</td><td>1.5</td></tr>
+<tr><td>Feb 26</td><td>17.7</td><td class="change-pos">-23%</td><td>33</td><td>53,547</td><td>8</td><td>24.2%</td><td>1</td><td>12.5%</td><td>0.5</td></tr>
+<tr><td>Mar 26</td><td>17.6</td><td class="change-flat">-0%</td><td>15</td><td>1,17,293</td><td>4</td><td>26.7%</td><td>0</td><td>0.0%</td><td>0.0</td></tr>
+<tr class="total-row"><td>Total</td><td>113.7</td><td></td><td>276</td><td>41,208</td><td>58</td><td>21.0%</td><td>6</td><td>10.3%</td><td>5.1</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">Funnel: QL → Trial Done → Paid</h4>
+    <canvas id="india-funnel-chart"></canvas>
+    <div class="chart-insight">Dual funnel collapse: 21% QL→TD AND 10% TD→Paid. Both rates are worst-in-portfolio. The problem is at every stage.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">CPQL Trajectory</h4>
+    <canvas id="india-cpql-spend-chart"></canvas>
+    <div class="chart-insight">CPQL went from ₹30K in Nov to ₹1.17L in March — rising 4x in 5 months. Spend is falling but leads are falling faster.</div>
+  </div>
+</div>
+
+<div class="section-title">Channel Split: Meta vs Google</div>
+<div class="channel-grid">
+  <div class="channel-card">
+    <h4><span class="badge-meta">META</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹57.5L</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">150</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value" style="color:var(--red)">₹38,310</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value" style="color:var(--red)">14.7%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">1</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--red)">₹57.5L</span></div>
+  </div>
+  <div class="channel-card">
+    <h4><span class="badge-google">GOOGLE</span> Performance</h4>
+    <div class="channel-metric"><span class="cm-label">Spend</span><span class="cm-value">₹56.3L</span></div>
+    <div class="channel-metric"><span class="cm-label">QLs</span><span class="cm-value">99</span></div>
+    <div class="channel-metric"><span class="cm-label">CPQL</span><span class="cm-value" style="color:var(--red)">₹56,838</span></div>
+    <div class="channel-metric"><span class="cm-label">TD Rate</span><span class="cm-value">29.3%</span></div>
+    <div class="channel-metric"><span class="cm-label">Paid</span><span class="cm-value">4</span></div>
+    <div class="channel-metric"><span class="cm-label">CAC</span><span class="cm-value" style="color:var(--red)">₹14.1L</span></div>
+  </div>
+</div>
+
+<div class="section-title">India Insights</div>
+<div class="insights-box">
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>₹1.14 Cr spent → 6 customers. This is the single biggest capital misallocation in the portfolio. ₹18.96L CAC is 27x ME's CAC.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Meta India: ₹57.5L spent → 1 paid customer. Meta is generating leads that never convert in the India market.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>CPQL rising from ₹30K to ₹1.17L while QLs drop from 105 to 15. The targeting has exhausted its viable audience.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Only 10.3% trial-to-paid rate. Even the few leads that trial don't convert. This is a product-market fit problem in India performance marketing, not a media efficiency problem.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Shut down India performance marketing immediately. Reallocate ₹17-20L/month to ME (which needs only ₹71K CAC) — this single move could add 25-28 paid customers per month.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>If India must have performance spend, cap at ₹5L/month on Google Brand only (29% TD rate is somewhat salvageable). Kill Meta entirely.</div>
+</div>
+
+</div>
+
+</div><!-- end content -->
+
+<script>
+// ========== TAB SWITCHING ==========
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  // Find matching tab
+  const tabs = document.querySelectorAll('.tab');
+  const tabMap = {executive:0, us:1, apac:2, me:3, uk:4, india:5};
+  tabs[tabMap[tab]].classList.add('active');
+  // Initialize charts for the tab if not done
+  initCharts(tab);
+}
+
+// ========== CHART DATA ==========
+const months = ['Nov 25','Dec 25','Jan 26','Feb 26','Mar 26'];
+const colors = {
+  US: '#2563eb', APAC: '#7c3aed', ME: '#059669', UK: '#dc2626', India: '#d97706', ALL: '#0f172a'
+};
+
+const countryData = {
+  US: {
+    spend: [1301990, 597740, 1741601, 2269890, 1275837],
+    qls: [1468, 873, 1893, 1854, 897],
+    cpql: [8869, 6847, 9200, 12243, 14223],
+    td: [306, 242, 545, 472, 199],
+    paid: [135, 114, 197, 150, 43],
+    cac: [96444, 52433, 88406, 151326, 296706],
+    booking: [1008565, 1040201, 1864512, 1583736, 402313]
+  },
+  APAC: {
+    spend: [271533, 139850, 382489, 781272, 675068],
+    qls: [300, 225, 439, 919, 630],
+    cpql: [9051, 6216, 8713, 8501, 10715],
+    td: [95, 92, 150, 262, 121],
+    paid: [44, 42, 62, 84, 27],
+    cac: [61712, 33298, 61692, 93009, 250025],
+    booking: [293946, 249049, 366730, 454019, 174742]
+  },
+  ME: {
+    spend: [253500, 112652, 330486, 325537, 190272],
+    qls: [451, 219, 516, 428, 294],
+    cpql: [5621, 5144, 6405, 7606, 6472],
+    td: [130, 84, 196, 119, 79],
+    paid: [40, 29, 57, 28, 16],
+    cac: [63375, 38845, 57980, 116263, 118920],
+    booking: [182811, 137946, 319385, 165322, 89673]
+  },
+  UK: {
+    spend: [7318, 6995, 5511, 114031, 90825],
+    qls: [33, 15, 15, 148, 108],
+    cpql: [2217, 4663, 3674, 7705, 8410],
+    td: [12, 7, 7, 40, 12],
+    paid: [4, 5, 4, 5, 1],
+    cac: [18294, 13989, 13778, 228063, 908253],
+    booking: [35797, 39201, 36124, 46729, 18584]
+  },
+  India: {
+    spend: [316970, 238810, 228929, 176705, 175939],
+    qls: [105, 65, 58, 33, 15],
+    cpql: [30188, 36740, 39471, 53547, 117293],
+    td: [16, 14, 16, 8, 4],
+    paid: [1, 1, 3, 1, 0],
+    cac: [3169703, 2388100, 763097, 1767055, 0],
+    booking: [15849, 15183, 14625, 5350, 0]
+  }
+};
+
+const chartsInitialized = {};
+
+function initCharts(tab) {
+  if (chartsInitialized[tab]) return;
+  chartsInitialized[tab] = true;
+
+  if (tab === 'executive') {
+    initExecCharts();
+  } else {
+    initCountryCharts(tab);
+  }
+}
+
+function initExecCharts() {
+  // CPQL trend
+  new Chart(document.getElementById('exec-cpql-chart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: ['US','APAC','ME','UK'].map(c => ({
+        label: c,
+        data: countryData[c].cpql,
+        borderColor: colors[c],
+        backgroundColor: colors[c] + '20',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 4,
+        fill: false
+      }))
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: {
+        y: { title: { display: true, text: 'CPQL (₹)', font: { size: 11 } }, ticks: { callback: v => '₹' + (v/1000).toFixed(0) + 'K' } }
+      }
+    }
+  });
+
+  // CAC trend
+  new Chart(document.getElementById('exec-cac-chart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: ['US','APAC','ME','UK'].map(c => ({
+        label: c,
+        data: countryData[c].cac,
+        borderColor: colors[c],
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 4,
+        fill: false
+      }))
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: {
+        y: { title: { display: true, text: 'CAC (₹)', font: { size: 11 } }, ticks: { callback: v => '₹' + (v/1000).toFixed(0) + 'K' } }
+      }
+    }
+  });
+
+  // Spend pie
+  new Chart(document.getElementById('exec-pie-chart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['US (₹7.19Cr)','APAC (₹2.25Cr)','ME (₹1.21Cr)','UK (₹22.5L)','India (₹1.14Cr)'],
+      datasets: [{
+        data: [71870584, 22502116, 12124458, 2246803, 11373541],
+        backgroundColor: ['#2563eb','#7c3aed','#059669','#dc2626','#d97706'],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'right', labels: { font: { size: 12 }, padding: 12 } } }
+    }
+  });
+
+  // Monthly spend trajectory
+  new Chart(document.getElementById('exec-spend-chart'), {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        { label: 'US', data: countryData.US.spend, backgroundColor: '#2563eb' },
+        { label: 'APAC', data: countryData.APAC.spend, backgroundColor: '#7c3aed' },
+        { label: 'ME', data: countryData.ME.spend, backgroundColor: '#059669' },
+        { label: 'UK', data: countryData.UK.spend, backgroundColor: '#dc2626' },
+        { label: 'India', data: countryData.India.spend, backgroundColor: '#d97706' }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: v => '₹' + (v/100000).toFixed(0) + 'L' } }
+      }
+    }
+  });
+}
+
+function initCountryCharts(tab) {
+  const c = tab.toUpperCase();
+  const d = countryData[c];
+  if (!d) return;
+
+  // Funnel chart
+  const totalQL = d.qls.reduce((a,b) => a+b, 0);
+  const totalTD = d.td.reduce((a,b) => a+b, 0);
+  const totalPaid = d.paid.reduce((a,b) => a+b, 0);
+
+  new Chart(document.getElementById(tab + '-funnel-chart'), {
+    type: 'bar',
+    data: {
+      labels: ['Qualified Leads', 'Trials Done', 'Paid'],
+      datasets: [{
+        data: [totalQL, totalTD, totalPaid],
+        backgroundColor: ['#3b82f6', '#8b5cf6', '#16a34a'],
+        borderRadius: 6,
+        barThickness: 50
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const vals = [totalQL, totalTD, totalPaid];
+              const pct = ctx.dataIndex > 0 ? ' (' + (vals[ctx.dataIndex]/vals[ctx.dataIndex-1]*100).toFixed(1) + '% conv)' : '';
+              return ctx.raw.toLocaleString() + pct;
+            }
+          }
+        }
+      },
+      scales: { x: { display: true } }
+    }
+  });
+
+  // CPQL + Spend dual axis
+  new Chart(document.getElementById(tab + '-cpql-spend-chart'), {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        {
+          label: 'Spend (₹L)',
+          data: d.spend.map(v => v / 100000),
+          backgroundColor: '#3b82f640',
+          borderColor: '#3b82f6',
+          borderWidth: 1,
+          yAxisID: 'y',
+          order: 2
+        },
+        {
+          label: 'CPQL (₹)',
+          data: d.cpql,
+          type: 'line',
+          borderColor: '#dc2626',
+          backgroundColor: '#dc262620',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#dc2626',
+          tension: 0.3,
+          yAxisID: 'y1',
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: {
+        y: { type: 'linear', position: 'left', title: { display: true, text: 'Spend (₹L)', font: { size: 11 } } },
+        y1: { type: 'linear', position: 'right', title: { display: true, text: 'CPQL (₹)', font: { size: 11 } }, grid: { drawOnChartArea: false },
+          ticks: { callback: v => '₹' + v.toLocaleString() }
+        }
+      }
+    }
+  });
+
+  // US-specific: Ethnicity charts
+  if (tab === 'us') {
+    const ethLabels = ['NRI', 'Non-NRI', 'Asian Others', 'Other'];
+    const ethTD = [38.9, 2.5, 7.3, 1.2];
+    const ethQLs = [4232, 1541, 1048, 164];
+    const ethTrials = [1646, 39, 77, 2];
+    const ethPaid = [596, 12, 30, 1];
+
+    new Chart(document.getElementById('us-eth-chart'), {
+      type: 'bar',
+      data: {
+        labels: ethLabels,
+        datasets: [{
+          label: 'QL → TD Rate (%)',
+          data: ethTD,
+          backgroundColor: ethTD.map(v => v > 20 ? '#16a34a' : v > 10 ? '#d97706' : '#dc2626')
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { title: { display: true, text: 'TD Rate (%)' }, max: 50 } }
+      }
+    });
+
+    new Chart(document.getElementById('us-eth-funnel-chart'), {
+      type: 'bar',
+      data: {
+        labels: ethLabels,
+        datasets: [
+          { label: 'QLs', data: ethQLs, backgroundColor: '#3b82f6' },
+          { label: 'Trials Done', data: ethTrials, backgroundColor: '#8b5cf6' },
+          { label: 'Paid', data: ethPaid, backgroundColor: '#16a34a' }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+        scales: { y: { title: { display: true, text: 'Count' } } }
+      }
+    });
+  }
+}
+
+// Initialize executive tab on load
+document.addEventListener('DOMContentLoaded', () => initCharts('executive'));
+</script>
+
+</body>
+</html>
