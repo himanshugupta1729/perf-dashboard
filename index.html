@@ -4,7 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Performance Marketing Dashboard — Country Deep Dive</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
+// ========== US ETHNICITY CHARTS ==========
+const usEthTdCtx = document.getElementById('us-eth-td-chart');
+if (usEthTdCtx) {
+  new Chart(usEthTdCtx, {
+    type: 'line',
+    data: {
+      labels: ["Nov 2025", "Dec 2025", "Jan 2026", "Feb 2026", "Mar 2026"],
+      datasets: [
+        { label: 'NRI TD%', data: [38.0, 40.9, 41.2, 38.6, 33.6], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill: true, tension: 0.3, pointRadius: 5, borderWidth: 2 },
+        { label: 'Non-NRI TD%', data: [2.9, 2.3, 2.2, 2.5, 0], borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)', fill: true, tension: 0.3, pointRadius: 5, borderWidth: 2 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+const usEthPdCtx = document.getElementById('us-eth-paid-chart');
+if (usEthPdCtx) {
+  new Chart(usEthPdCtx, {
+    type: 'line',
+    data: {
+      labels: ["Nov 2025", "Dec 2025", "Jan 2026", "Feb 2026", "Mar 2026"],
+      datasets: [
+        { label: 'NRI Paid%', data: [45.0, 45.2, 35.7, 32.7, 21.8], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill: true, tension: 0.3, pointRadius: 5, borderWidth: 2 },
+        { label: 'Non-NRI Paid%', data: [26.7, 100.0, 33.3, 0.0, 0], borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)', fill: true, tension: 0.3, pointRadius: 5, borderWidth: 2 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+</script>
 <style>
 :root {
   --green: #16a34a;
@@ -403,6 +447,47 @@ tr.total-row { font-weight: 700; background: #f1f5f9 !important; border-top: 2px
   <div class="insight-item"><span class="insight-tag fix">FIX</span>Non-NRI needs a fundamentally different trial experience. Current 2.5% TD rate means the product/trial doesn't resonate with non-Indian families.</div>
 </div>
 
+
+<div class="section-title">Ethnicity Deep-Dive</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Ethnicity</th><th>QLs</th><th>Trial Done</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Avg Booking</th><th>Share of Paid</th></tr>
+</thead>
+<tbody>
+<tr><td>NRI</td><td>4,232</td><td>1646</td><td style="color:var(--green);font-weight:700">38.9%</td><td>596</td><td>36.2%</td><td>₹92.6K</td><td style="color:var(--green);font-weight:700">93.3%</td></tr>
+<tr><td>Asian (Others)</td><td>933</td><td>67</td><td>7.2%</td><td>28</td><td>41.8%</td><td>₹90.3K</td><td>4.4%</td></tr>
+<tr><td>Non-NRI</td><td>1,541</td><td>39</td><td>2.5%</td><td>12</td><td>30.8%</td><td>₹86.5K</td><td>1.9%</td></tr>
+<tr><td>Other</td><td>129</td><td>10</td><td>7.8%</td><td>2</td><td>20.0%</td><td>₹108.9K</td><td>0.3%</td></tr>
+<tr><td>African-American</td><td>95</td><td>2</td><td>2.1%</td><td>1</td><td>50.0%</td><td>₹18.5K</td><td>0.2%</td></tr>
+<tr><td>Hispanic</td><td>55</td><td>0</td><td style="color:var(--red);font-weight:700">0.0%</td><td>0</td><td>0.0%</td><td>₹0.0K</td><td>0.0%</td></tr>
+<tr class="total-row"><td>Total</td><td>6,985</td><td>1764</td><td>25.3%</td><td>639</td><td>36.2%</td><td>₹92.3K</td><td>100%</td></tr>
+
+</tbody>
+</table>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-container">
+    <h4 style="font-size:14px;margin-bottom:12px">NRI vs Non-NRI: Trial Done Rate (Monthly)</h4>
+    <canvas id="us-eth-td-chart"></canvas>
+    <div class="chart-insight">NRI trial-done rate is stable at 33-41%. Non-NRI barely clears 2-3% — the trial experience fundamentally does not work for non-Indian families.</div>
+  </div>
+  <div class="chart-container">
+    <h4 style="font-size:14px;margin-bottom:12px">NRI vs Non-NRI: Trial→Paid Rate (Monthly)</h4>
+    <canvas id="us-eth-paid-chart"></canvas>
+    <div class="chart-insight">When Non-NRI leads DO trial, their conversion is decent (27-100% on tiny samples). The bottleneck is getting them to trial, not closing them.</div>
+  </div>
+</div>
+
+<div class="insights-box">
+  <h3>Ethnicity Insight</h3>
+  <div class="insight-item"><span class="insight-tag rec">KEY</span>93% of US paid customers are NRI. Non-NRI trial-done rate is 2.5% — for every 100 Non-NRI QLs generated, only ~2-3 trial and ~1 converts. NRI is 15x more efficient at the top of funnel.</div>
+  <div class="insight-item"><span class="insight-tag broken">BROKEN</span>1,541 Non-NRI QLs generated but only 39 trialed (2.5%) and 12 paid. The ₹ spent acquiring Non-NRI leads at current trial rates is largely wasted.</div>
+  <div class="insight-item"><span class="insight-tag fix">FIX</span>Asian (Others) — 933 QLs, 7.2% TD, 41.8% paid rate, ₹90.3K avg booking. This segment trials poorly but converts well when they do. Fix the trial experience for this group.</div>
+</div>
+
 </div>
 
 <!-- ==================== APAC TAB ==================== -->
@@ -532,6 +617,33 @@ tr.total-row { font-weight: 700; background: #f1f5f9 !important; border-top: 2px
   <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Indian-Expats-NAPLAN: 106 QLs but only 9 trials (8.5% TD). NAPLAN-focused targeting attracts browsers, not buyers.</div>
   <div class="insight-item"><span class="insight-tag fix">FIX</span>Scale Google from 10% to 25-30% of APAC spend. The 50% TD rate justifies aggressive expansion.</div>
   <div class="insight-item"><span class="insight-tag fix">FIX</span>Pull back February-level spend until March conversion data stabilizes. Current trajectory is unsustainable.</div>
+</div>
+
+
+<div class="section-title">Ethnicity Breakdown</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Ethnicity</th><th>QLs</th><th>Trial Done</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Avg Booking</th><th>Share of Paid</th></tr>
+</thead>
+<tbody>
+<tr><td>NRI / Non Native English Speaker</td><td>1,572</td><td>586</td><td>37.3%</td><td>208</td><td>35.5%</td><td>₹60.4K</td><td style="color:var(--green);font-weight:700">80.3%</td></tr>
+<tr><td>Asian (Others)</td><td>524</td><td>76</td><td>14.5%</td><td>26</td><td>34.2%</td><td>₹42.9K</td><td>10.0%</td></tr>
+<tr><td>Others</td><td>46</td><td>13</td><td>28.3%</td><td>10</td><td>76.9%</td><td>₹95.2K</td><td>3.9%</td></tr>
+<tr><td>African-American</td><td>159</td><td>13</td><td>8.2%</td><td>5</td><td>38.5%</td><td>₹46.7K</td><td>1.9%</td></tr>
+<tr><td>Undetected</td><td>70</td><td>15</td><td>21.4%</td><td>5</td><td>33.3%</td><td>₹33.1K</td><td>1.9%</td></tr>
+<tr><td>Asian (Chinese)</td><td>32</td><td>5</td><td>15.6%</td><td>2</td><td>40.0%</td><td>₹62.4K</td><td>0.8%</td></tr>
+<tr><td>Hispanic</td><td>52</td><td>9</td><td>17.3%</td><td>2</td><td>22.2%</td><td>₹78.0K</td><td>0.8%</td></tr>
+<tr><td>Asian (Vietnamese)</td><td>34</td><td>1</td><td>2.9%</td><td>1</td><td>100.0%</td><td>₹73.2K</td><td>0.4%</td></tr>
+<tr><td>Other</td><td>24</td><td>2</td><td>8.3%</td><td>0</td><td>0.0%</td><td>₹0.0K</td><td>0.0%</td></tr>
+<tr class="total-row"><td>Total</td><td>2,513</td><td>720</td><td>28.7%</td><td>259</td><td>36.0%</td><td>₹59.4K</td><td>100%</td></tr>
+
+</tbody>
+</table>
+</div>
+<div class="insights-box">
+  <h3>Ethnicity Note</h3>
+  <div class="insight-item"><span class="insight-tag rec">KEY</span>NRI / Non Native English Speaker accounts for 80% of APAC paid customers. Total paid: 259 on 2,513 QLs (28.7% TD rate).</div>
 </div>
 
 </div>
@@ -665,6 +777,31 @@ tr.total-row { font-weight: 700; background: #f1f5f9 !important; border-top: 2px
   <div class="insight-item"><span class="insight-tag fix">FIX</span>Work on upselling/longer subscriptions to lift avg booking from ₹52.7K toward ₹70K+. The CAC supports it.</div>
 </div>
 
+
+<div class="section-title">Ethnicity Breakdown</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Ethnicity</th><th>QLs</th><th>Trial Done</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Avg Booking</th><th>Share of Paid</th></tr>
+</thead>
+<tbody>
+<tr><td>NRI / Non Native English Speaker</td><td>984</td><td>387</td><td>39.3%</td><td>99</td><td>25.6%</td><td>₹52.9K</td><td style="color:var(--green);font-weight:700">58.2%</td></tr>
+<tr><td>Asian (Others)</td><td>610</td><td>149</td><td>24.4%</td><td>43</td><td>28.9%</td><td>₹48.5K</td><td>25.3%</td></tr>
+<tr><td>Undetected</td><td>152</td><td>38</td><td>25.0%</td><td>11</td><td>28.9%</td><td>₹46.6K</td><td>6.5%</td></tr>
+<tr><td>Others</td><td>63</td><td>15</td><td>23.8%</td><td>8</td><td>53.3%</td><td>₹76.0K</td><td>4.7%</td></tr>
+<tr><td>African-American</td><td>53</td><td>11</td><td>20.8%</td><td>6</td><td>54.5%</td><td>₹53.6K</td><td>3.5%</td></tr>
+<tr><td>Hispanic</td><td>37</td><td>7</td><td>18.9%</td><td>3</td><td>42.9%</td><td>₹62.2K</td><td>1.8%</td></tr>
+<tr><td>Other</td><td>9</td><td>1</td><td>11.1%</td><td>0</td><td>0.0%</td><td>₹0.0K</td><td>0.0%</td></tr>
+<tr class="total-row"><td>Total</td><td>1,908</td><td>608</td><td>31.9%</td><td>170</td><td>28.0%</td><td>₹52.7K</td><td>100%</td></tr>
+
+</tbody>
+</table>
+</div>
+<div class="insights-box">
+  <h3>Ethnicity Note</h3>
+  <div class="insight-item"><span class="insight-tag rec">KEY</span>NRI / Non Native English Speaker accounts for 58% of ME paid customers. Total paid: 170 on 1,908 QLs (31.9% TD rate).</div>
+</div>
+
 </div>
 
 <!-- ==================== UK TAB ==================== -->
@@ -777,6 +914,28 @@ tr.total-row { font-weight: 700; background: #f1f5f9 !important; border-top: 2px
   <div class="insight-item"><span class="insight-tag fix">FIX</span>Pull back to ₹3-5L/month total and focus on Google Brand + PayU-Testimonial campaigns until unit economics prove out.</div>
 </div>
 
+
+<div class="section-title">Ethnicity Breakdown</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Ethnicity</th><th>QLs</th><th>Trial Done</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Avg Booking</th><th>Share of Paid</th></tr>
+</thead>
+<tbody>
+<tr><td>NRI / Non Native English Speaker</td><td>190</td><td>57</td><td>30.0%</td><td>15</td><td>26.3%</td><td>₹94.5K</td><td style="color:var(--green);font-weight:700">78.9%</td></tr>
+<tr><td>Asian (Others)</td><td>73</td><td>12</td><td>16.4%</td><td>2</td><td>16.7%</td><td>₹65.5K</td><td>10.5%</td></tr>
+<tr><td>Other</td><td>24</td><td>5</td><td>20.8%</td><td>1</td><td>20.0%</td><td>₹98.7K</td><td>5.3%</td></tr>
+<tr><td>African-American</td><td>32</td><td>4</td><td>12.5%</td><td>1</td><td>25.0%</td><td>₹117.6K</td><td>5.3%</td></tr>
+<tr class="total-row"><td>Total</td><td>319</td><td>78</td><td>24.5%</td><td>19</td><td>24.4%</td><td>₹92.9K</td><td>100%</td></tr>
+
+</tbody>
+</table>
+</div>
+<div class="insights-box">
+  <h3>Ethnicity Note</h3>
+  <div class="insight-item"><span class="insight-tag rec">KEY</span>NRI / Non Native English Speaker accounts for 79% of UK paid customers. Total paid: 19 on 319 QLs (24.5% TD rate).</div>
+</div>
+
 </div>
 
 <!-- ==================== INDIA TAB ==================== -->
@@ -887,6 +1046,28 @@ tr.total-row { font-weight: 700; background: #f1f5f9 !important; border-top: 2px
   <div class="insight-item"><span class="insight-tag broken">BROKEN</span>Only 10.3% trial-to-paid rate. Even the few leads that trial don't convert. This is a product-market fit problem in India performance marketing, not a media efficiency problem.</div>
   <div class="insight-item"><span class="insight-tag fix">FIX</span>Shut down India performance marketing immediately. Reallocate ₹17-20L/month to ME (which needs only ₹71K CAC) — this single move could add 25-28 paid customers per month.</div>
   <div class="insight-item"><span class="insight-tag fix">FIX</span>If India must have performance spend, cap at ₹5L/month on Google Brand only (29% TD rate is somewhat salvageable). Kill Meta entirely.</div>
+</div>
+
+
+<div class="section-title">Ethnicity Breakdown</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Ethnicity</th><th>QLs</th><th>Trial Done</th><th>TD%</th><th>Paid</th><th>Paid%</th><th>Avg Booking</th><th>Share of Paid</th></tr>
+</thead>
+<tbody>
+<tr><td>NRI / Non Native English Speaker</td><td>91</td><td>23</td><td>25.3%</td><td>3</td><td>13.0%</td><td>₹86.7K</td><td>50.0%</td></tr>
+<tr><td>Others</td><td>19</td><td>7</td><td>36.8%</td><td>2</td><td>28.6%</td><td>₹49.1K</td><td>33.3%</td></tr>
+<tr><td>NRI</td><td>140</td><td>25</td><td>17.9%</td><td>1</td><td>4.0%</td><td>₹151.8K</td><td>16.7%</td></tr>
+<tr><td>Other</td><td>26</td><td>3</td><td>11.5%</td><td>0</td><td>0.0%</td><td>₹0.0K</td><td>0.0%</td></tr>
+<tr class="total-row"><td>Total</td><td>276</td><td>58</td><td>21.0%</td><td>6</td><td>10.3%</td><td>₹85.0K</td><td>100%</td></tr>
+
+</tbody>
+</table>
+</div>
+<div class="insights-box">
+  <h3>Ethnicity Note</h3>
+  <div class="insight-item"><span class="insight-tag rec">KEY</span>NRI / Non Native English Speaker accounts for 50% of India paid customers. Total paid: 6 on 276 QLs (21.0% TD rate).</div>
 </div>
 
 </div>
